@@ -40,3 +40,24 @@ test('a CLI that no provider shares is still migrated for every Bot', () => {
   assert.equal(migrateLocalRoutes(state), true)
   assert.equal(state.bots.b1.model, 'local-codex-cli/gpt-5')
 })
+
+test('the dsh-llm-antigravity-acp provider keeps its model across restarts', () => {
+  // The plugin registers `antigravity/<model>`; the Antigravity CLI is `antigravity`
+  // too. A Bot on the plugin must not be moved to the local agent on every start.
+  for (const ref of ['antigravity/gemini-4-neon', 'antigravity/claude-opus-5-5']) {
+    const state = team(ref)
+    assert.equal(migrateLocalRoutes(state), false, ref)
+    assert.equal(state.bots.b1.model, ref, ref)
+    assert.equal(state.bots.b1.appliedModel, ref, ref)
+  }
+})
+
+test('a Bot that ran on the Antigravity CLI, or on its default, still moves', () => {
+  const ran = team('antigravity/gemini-4-neon', { s1: { route: 'antigravity' } })
+  ran.bots.b1.sessionId = 's1'
+  assert.equal(migrateLocalRoutes(ran), true)
+  assert.equal(ran.bots.b1.model, 'local-antigravity/gemini-4-neon')
+  const cliDefault = team('antigravity/default')
+  assert.equal(migrateLocalRoutes(cliDefault), true)
+  assert.equal(cliDefault.bots.b1.model, 'local-antigravity/default')
+})
